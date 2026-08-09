@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VoxVault - Voice Memory Assistant</title>
+    <link rel="icon" type="image/png" sizes="16x16" href="/static/favicon/favicon-16x16.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon/favicon-32x32.png">
+    <link rel="icon" type="image/x-icon" href="/static/favicon/favicon.ico">
+    <link rel="apple-touch-icon" href="/static/favicon/apple-touch-icon.png">
+    <link rel="manifest" href="/static/favicon/site.webmanifest">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/styles.css">
+    <script>
+        (function () {
+            try {
+                // One-time migration from the old "Echo" storage keys (v0.1).
+                const legacy = { 'echo-theme': 'voxvault-theme', 'echo_token': 'voxvault_token', 'echo_user': 'voxvault_user', 'echo_session': 'voxvault_session' };
+                for (const k in legacy) {
+                    if (localStorage.getItem(legacy[k]) === null && localStorage.getItem(k) !== null) {
+                        localStorage.setItem(legacy[k], localStorage.getItem(k));
+                    }
+                }
+                const saved = localStorage.getItem('voxvault-theme') || 'light';
+                document.documentElement.dataset.theme = saved;
+            } catch (e) { document.documentElement.dataset.theme = 'light'; }
+        })();
+    </script>
+    <script>
+        window.APP_CONFIG = { supabaseEnabled: {{ 'true' if supabase_enabled else 'false' }} };
+    </script>
+</head>
+<body>
+    <div id="authOverlay">
+        <button class="icon-btn auth-theme-btn" onclick="toggleTheme()" title="Toggle theme (Light / Dark)" id="authThemeBtn">
+            <span class="material-symbols-outlined" id="authThemeIcon">dark_mode</span>
+        </button>
+        <div class="auth-card">
+            <div class="auth-logo"><span class="material-symbols-outlined">graphic_eq</span></div>
+            <div class="auth-title" id="authTitle">Welcome</div>
+            <div class="auth-sub" id="authSub">Sign in to your VoxVault workspace. Your meeting memory is saved per account.</div>
+            <div class="auth-field">
+                <label for="authEmail">Email</label>
+                <input type="email" id="authEmail" autocomplete="email" placeholder="you@example.com">
+            </div>
+            <div class="auth-field">
+                <label for="authPassword">Password</label>
+                <input type="password" id="authPassword" autocomplete="current-password" placeholder="••••••••">
+            </div>
+            <button class="btn-auth" id="authBtn" onclick="submitAuth()">Sign In</button>
+            <div class="auth-switch" id="authSwitch">New here? <a onclick="toggleAuthMode()" id="authSwitchLink">Create an account</a></div>
+            <div class="auth-mode-badge" id="authMode"></div>
+        </div>
+    </div>
+
+    <nav class="sidebar">
+        <div class="brand">
+            <div class="brand-logo"><span class="material-symbols-outlined">graphic_eq</span></div>
+            <div>
+                <div class="brand-name">VoxVault</div>
+                <div class="brand-tag">Voice Memory Assistant</div>
+            </div>
+        </div>
+        <button id="newBtn" class="btn-new" onclick="newSession(true)">
+            <span class="material-symbols-outlined" style="font-size:18px;font-weight:600">add</span>
+            New Session
+        </button>
+        <div class="nav">
+            <a class="nav-item active" href="#" data-view="dashboard"><span class="material-symbols-outlined">dashboard</span> Dashboard</a>
+            <a class="nav-item" href="#" data-view="meetings"><span class="material-symbols-outlined">event_note</span> Recent Meetings</a>
+            <a class="nav-item" href="#" data-view="workspace"><span class="material-symbols-outlined">workspaces</span> Workspace</a>
+            <a class="nav-item" href="#" data-view="settings"><span class="material-symbols-outlined">settings</span> Settings</a>
+        </div>
+        <div class="profile">
+            <div class="avatar" id="avatarLabel">U</div>
+            <div>
+                <div class="profile-name" id="profileName">You</div>
+                <div class="profile-plan" id="profileEmail">Not signed in</div>
+            </div>
+            <button class="logout-btn" onclick="logout()" style="margin-left:auto;">Logout</button>
+        </div>
+    </nav>
+
+    <div class="wrapper">
+        <header class="topbar">
+            <div class="topbar-left">
+                <div class="waveform" id="waveform">
+                    <div class="waveform-bar"></div>
+                    <div class="waveform-bar"></div>
+                    <div class="waveform-bar"></div>
+                    <div class="waveform-bar"></div>
+                    <div class="waveform-bar"></div>
+                    <div class="waveform-bar"></div>
+                    <div class="waveform-bar"></div>
+                    <div class="waveform-bar"></div>
+                </div>
+                <span class="session-badge" id="sessionBadge" title="Current session">
+                    <span class="material-symbols-outlined">fork_right</span>
+                    <span id="sessionName">No active session</span>
+                </span>
+                <div class="timer">
+                    <div id="pulseDot" class="pulse-dot" style="display:none;"></div>
+                    <span id="timer">00:00:00</span>
+                </div>
+            </div>
+            <div class="topbar-right">
+                <span id="listenState" class="listen-state">Idle</span>
+                <select id="sourceSel" class="source-select" title="Audio source">
+                    <option value="mic">Microphone</option>
+                    <option value="sys">System Audio (Meeting)</option>
+                    <option value="both">Mic + System</option>
+                </select>
+                <button class="icon-btn" onclick="toggleTheme()" title="Toggle theme (Light / Dark)">
+                    <span class="material-symbols-outlined" id="themeIcon">dark_mode</span>
+                </button>
+                <button class="icon-btn" onclick="toggleRecording()" title="Toggle recording">
+                    <span class="material-symbols-outlined" id="micIcon" style="font-variation-settings:'FILL' 0">mic</span>
+                </button>
+                <button class="btn-end" onclick="stopRecording()">End Session</button>
+            </div>
+        </header>
+
+        <div class="content">
+            <section id="view-dashboard" class="view active">
+                <div class="feed">
+                    <div class="feed-inner">
+                        <div id="transcript"></div>
+                    </div>
+                </div>
+
+                <aside class="rail">
+                    <div class="rail-header">
+                        <h2><span class="material-symbols-outlined" style="font-size:16px">smart_toy</span> VoxVault Assistant</h2>
+                        <p>Meeting memory &amp; contextual analysis</p>
+                    </div>
+                    <div class="rail-body">
+                        <div id="memoryList"></div>
+                    </div>
+                    <div class="chat-footer">
+                        <div id="answerBox" class="answer-card" style="display:none;">
+                            <div class="label">Answer</div>
+                            <div id="answerText"></div>
+                            <audio id="answerAudio" controls></audio>
+                        </div>
+                        <div class="quick-actions">
+                            <button class="chip" onclick="askQuestion('summarize')">Summarize</button>
+                            <button class="chip" onclick="askQuestion('action items')">Action Items</button>
+                            <button class="chip" onclick="askQuestion('decisions')">Decisions</button>
+                        </div>
+                        <div class="input-row">
+                            <input type="text" id="queryInput" placeholder="Ask VoxVault about this meeting..." onkeypress="if(event.key==='Enter') submitQuery()">
+                            <button class="send-btn" onclick="submitQuery()">
+                                <span class="material-symbols-outlined">arrow_upward</span>
+                            </button>
+                        </div>
+                    </div>
+                </aside>
+            </section>
+
+            <section id="view-meetings" class="view">
+                <div class="view-pad">
+                    <div class="page-title">Recent Meetings</div>
+                    <div class="page-sub">All transcribed sessions across your workspace.</div>
+                    <div id="meetingsList"></div>
+                </div>
+            </section>
+
+            <section id="view-workspace" class="view">
+                <div class="view-pad">
+                    <div class="page-title">Workspace</div>
+                    <div class="page-sub">Voice pipeline status and system configuration.</div>
+                    <div class="stat-grid">
+                        <div class="stat-card"><div class="k">Stored Memories</div><div class="v" id="statMemories">-</div><div class="d">semantic vectors in Qdrant</div></div>
+                        <div class="stat-card"><div class="k">STT Model</div><div class="v" id="statStt">-</div><div class="d">local whisper inference</div></div>
+                        <div class="stat-card"><div class="k">TTS Engine</div><div class="v" id="statTts">-</div><div class="d">Rime neural voice</div></div>
+                        <div class="stat-card"><div class="k">Vector Store</div><div class="v" id="statVec">-</div><div class="d" id="statVecDetail">collection status</div></div>
+                    </div>
+                    <div class="panel">
+                        <h3>Pipeline</h3>
+                        <div class="kv"><span class="k">Audio Capture</span><span class="v">Web Audio API (16 kHz PCM) over WebSocket</span></div>
+                        <div class="kv"><span class="k">Speech-to-Text</span><span class="v">faster-whisper (base.en)</span></div>
+                        <div class="kv"><span class="k">Embeddings</span><span class="v">all-MiniLM-L6-v2 &middot; 384 dims</span></div>
+                        <div class="kv"><span class="k">Vector Search</span><span class="v"><span class="badge-dot" id="vecDot"></span><span id="vecName">Qdrant</span></span></div>
+                        <div class="kv"><span class="k">Text-to-Speech</span><span class="v">Rime API (coda)</span></div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="view-settings" class="view">
+                <div class="view-pad">
+                    <div class="page-title">Settings</div>
+                    <div class="page-sub">Preferences and data controls.</div>
+                    <div class="panel">
+                        <h3>Appearance</h3>
+                        <div class="kv"><span class="k">Theme</span><span class="v"><button class="chip" onclick="toggleTheme()" id="settingsThemeBtn" style="font-size:0.7rem;">Switch Theme</button></span></div>
+                        <div class="kv"><span class="k">Mode</span><span class="v" id="themeLabel">-</span></div>
+                    </div>
+                    <div class="panel">
+                        <h3>Preferences</h3>
+                        <div class="kv"><span class="k">Speaker Voice</span><span class="v">coda (en)</span></div>
+                        <div class="kv"><span class="k">Memory Retention</span><span class="v">Full session</span></div>
+                        <div class="kv"><span class="k">Transcription Language</span><span class="v">en</span></div>
+                    </div>
+                    <div class="panel">
+                        <h3>Data Controls</h3>
+                        <p style="color:var(--on-surface-variant); font-size:0.85rem; margin-bottom:1rem;">Clear all stored meeting memories from Qdrant. This cannot be undone.</p>
+                        <button class="btn-danger" onclick="clearMemory()">Clear All Memories</button>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>

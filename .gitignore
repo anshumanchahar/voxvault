@@ -1,0 +1,26 @@
+# Env / secrets
+.env
+data/users.json
+data/users.example.json
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Downloaded models / generated files
+models/
+app/static/tts/
+app/static/*.wav
+!app/static/mock_audio.wav
+!app/static/speech_like.wav
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+
+# Qdrant data (if using local persistence)
+qdrant_storage/
