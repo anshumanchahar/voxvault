@@ -336,8 +336,8 @@ See **[IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md)** for:
 - [x] Working proof: live voice→memory→Q&A feature + WS test script
 - [x] Architecture diagram (ARCHITECTURE.md)
 - [x] Limitations & team contributions documented
-- [ ] Add real team member names/contributions above
-- [ ] Ensure `.env` is never committed (only `.env.example`)
+- [x] Add real team member names/contributions above
+- [x] Ensure `.env` is never committed (only `.env.example`)
 
 ---
 
