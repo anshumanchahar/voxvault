@@ -320,10 +320,9 @@ See **[IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md)** for:
 
 | Member | Contributions |
 |--------|---------------|
-| *(add member 1)* | *(add contributions)* |
-| *(add member 2)* | *(add contributions)* |
-| *(add member 3)* | *(add contributions)* |
-| *(add member 4, optional)* | *(add contributions)* |
+| *(Shresth Gupta)* | *(dev)* |
+| *(Anshuman Singh Chahar)* | *(add contributions)* |
+| *(Yuvraj Singh)* | *(add contributions)* |
 
 > **AI-assisted coding disclosure (per problem-statement rules):** AI tooling (opencode) was used during development for scaffolding, code review, and documentation. Every component is understood and verified by the team — the team is fully able to explain the implementation.
 
